@@ -156,12 +156,12 @@ function openCheckout() {
     alert("Đặt hàng thành công! Chúng tôi sẽ sớm liên hệ.");
     cart = [];
     saveCart();
-    btn.innerText = "Thanh toán";
+    btn.innerText = "Đặt Hàng";
     btn.disabled = false;
   })
   .catch(err => {
     alert("Có lỗi xảy ra khi gửi đơn hàng.");
-    btn.innerText = "Thanh toán";
+    btn.innerText = "Đặt Hàng";
     btn.disabled = false;
   });
 }
