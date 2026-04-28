@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mini Shop</title>
+  <style>
+    body { font-family: Arial; margin:0; background:#f5f5f5;}
+    .container { padding:10px; }
+    .card { 
+      border:1px solid #ddd; 
+      margin-bottom:10px; 
+      padding:10px; 
+      background:#fff;
+      border-radius:8px;
+    }
+    img { border-radius:6px; }
+    button { 
+      padding:10px; 
+      background:#28a745; 
+      color:white; 
+      border:none; 
+      border-radius:5px;
+      width:100%;
+    }
+    .cart { 
+      position:fixed; 
+      bottom:0; 
+      width:100%; 
+      background:#fff; 
+      padding:10px; 
+      border-top:1px solid #ccc;
+    }
+  </style>
+</head>
+
+<body>
+<div class="container">
+  <h2>Sản phẩm</h2>
+  <div id="products"></div>
+</div>
+
+<div class="cart">
+  <span id="cartCount">0</span> sản phẩm |
+  <b id="cartTotal">0</b> VND
+  <button onclick="openCheckout()">Thanh toán</button>
+</div>
+
+<script>
+const API = "https://script.google.com/macros/s/AKfycbzsbTRNyFi5ssTJtUq5KguidUu5mwg35esdn4DubwYaqxHh-kQtYFblNmWWfXfd2dYr/exec?action=products";
+const API_POST = "https://script.google.com/macros/s/AKfycbzsbTRNyFi5ssTJtUq5KguidUu5mwg35esdn4DubwYaqxHh-kQtYFblNmWWfXfd2dYr/exec";
+
+let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+// ===== LOAD PRODUCTS =====
+fetch(API)
+  .then(res => res.json())
+  .then(data => {
+    const el = document.getElementById("products");
+
+    data.forEach(p => {
+      el.innerHTML += `
+        <div class="card">
+          <img src="${p.image}" width="100%">
+          <h3>${p.name}</h3>
+          <p>${p.price} VND</p>
+          <button onclick='addToCart(${JSON.stringify(p)})'>Mua</button>
+        </div>
+      `;
+    });
+  });
+
+// ===== CART =====
+function addToCart(p) {
+  let item = cart.find(i => i.id == p.id);
+
+  if (item) item.quantity++;
+  else cart.push({ ...p, quantity:1 });
+
+  saveCart();
+}
+
+function saveCart() {
+  localStorage.setItem("cart", JSON.stringify(cart));
+  renderCart();
+}
+
+function renderCart() {
+  let total = 0, count = 0;
+
+  cart.forEach(i => {
+    total += i.price * i.quantity;
+    count += i.quantity;
+  });
+
+  document.getElementById("cartTotal").innerText = total;
+  document.getElementById("cartCount").innerText = count;
+}
+
+renderCart();
+
+// ===== CHECKOUT =====
+function openCheckout() {
+  const name = prompt("Tên khách hàng:");
+  const phone = prompt("Số điện thoại:");
+  const address = prompt("Địa chỉ:");
+
+  if (!name || !phone) {
+    alert("Vui lòng nhập đầy đủ!");
+    return;
+  }
+
+  const total = cart.reduce((s,i)=>s+i.price*i.quantity,0);
+
+  fetch(API_POST, {
+    method:"POST",
+    body: JSON.stringify({
+      action:"createOrder",
+      customer:{name, phone, address},
+      items: cart,
+      total
+    })
+  })
+  .then(r=>r.json())
+  .then(res=>{
+    alert("Đặt hàng thành công!");
+    cart = [];
+    saveCart();
+  });
+}
+</script>
+</body>
+</html>
