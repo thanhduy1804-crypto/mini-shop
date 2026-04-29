@@ -9,10 +9,19 @@
     .container { padding:15px; max-width: 600px; margin: auto; }
     
     /* Thông tin cửa hàng */
-    .shop-header { background: #fff; padding: 20px; text-align: center; border-bottom: 2px solid #28a745; margin-bottom: 15px; }
+    .shop-header { background: #fff; padding: 20px; text-align: center; border-bottom: 2px solid #28a745; margin-bottom: 10px; }
     .shop-header h1 { margin: 0 0 10px; color: #28a745; font-size: 24px; }
     .shop-info { font-size: 14px; color: #555; line-height: 1.6; }
     .shop-info a { color: #007bff; text-decoration: none; font-weight: bold; }
+
+    /* Ô tìm kiếm */
+    .search-box {
+      position: sticky; top: 0; background: #f5f5f5; padding: 10px 0; z-index: 90;
+    }
+    #searchInput {
+      width: 100%; padding: 12px 15px; border: 2px solid #28a745; border-radius: 25px;
+      box-sizing: border-box; outline: none; font-size: 16px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    }
     
     /* Danh sách sản phẩm */
     .card { 
@@ -21,7 +30,7 @@
       box-shadow: 0 2px 5px rgba(0,0,0,0.1);
       display: flex; gap: 15px; align-items: center;
     }
-    .card img { border-radius: 8px; width: 85px; height: 85px; object-fit: cover; }
+    .card img { border-radius: 8px; width: 85px; height: 85px; object-fit: cover; background: #eee; }
     .card-info { flex: 1; }
     .card-info h3 { margin: 0; font-size: 16px; color: #333; }
     .card-info p { color: #e44d26; font-weight: bold; margin: 4px 0; }
@@ -63,12 +72,17 @@
   <h1>TẠP HOÁ KIM NGỌC</h1>
   <div class="shop-info">
     📞 Hotline: <a href="tel:0963839220">096.38.39.220</a><br>
-    📍 Địa chỉ: Ấp Long An 1, Xã Phước Vĩnh Tây, Tỉnh Tây Ninh<br>
-    🗺️ <a href="https://maps.app.goo.gl/2zKTkK4jKZ4qYEk16" target="_blank">Xem trên Google Maps</a>
+    📍 Địa chỉ: Ấp Long An 1, Xã Phước Vĩnh Tây, Cần Giuộc, Long An<br>
+    🗺️ <a href="https://goo.gl" target="_blank">Xem trên Google Maps</a>
   </div>
 </div>
 
 <div class="container">
+  <!-- Ô tìm kiếm -->
+  <div class="search-box">
+    <input type="text" id="searchInput" placeholder="Tìm tên sản phẩm..." oninput="filterProducts()">
+  </div>
+
   <div id="products">Đang tải sản phẩm...</div>
 </div>
 
@@ -90,35 +104,56 @@
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbwamQrrD7jx8o6KnT4YJJDJM9MLvEUc3oFZtxod5OeKLBrhBPEWKnDzPMpmIpUBDzfx/exec";
+const API = "https://google.com";
 let allProducts = [];
 let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+// Hàm chuyển đổi tiếng Việt có dấu thành không dấu để tìm kiếm dễ hơn
+function removeAccents(str) {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D');
+}
 
 function loadProducts() {
   fetch(`${API}?action=products`)
     .then(res => res.json())
     .then(data => {
       allProducts = data;
-      const el = document.getElementById("products");
-      el.innerHTML = "";
-      data.forEach(p => {
-        const isOutOfStock = p.stock <= 0;
-        el.innerHTML += `
-          <div class="card">
-            <img src="${p.image || 'https://placeholder.com'}" alt="${p.name}">
-            <div class="card-info">
-              <h3>${p.name}</h3>
-              <p>${Number(p.price).toLocaleString()} VND</p>
-              <span class="stock-tag">${isOutOfStock ? '❌ Hết hàng' : '✔️ Sẵn có: ' + p.stock}</span>
-            </div>
-            <button class="btn-add" ${isOutOfStock ? 'disabled' : ''} onclick="addToCart('${p.id}')">
-              ${isOutOfStock ? 'Hết hàng' : 'Mua'}
-            </button>
-          </div>
-        `;
-      });
+      displayProducts(allProducts);
     })
     .catch(() => document.getElementById("products").innerHTML = "Lỗi kết nối.");
+}
+
+function displayProducts(data) {
+  const el = document.getElementById("products");
+  el.innerHTML = "";
+  if (data.length === 0) {
+    el.innerHTML = "<p style='text-align:center; padding:20px; color:#888;'>Không tìm thấy sản phẩm này.</p>";
+    return;
+  }
+  data.forEach(p => {
+    const isOutOfStock = p.stock <= 0;
+    el.innerHTML += `
+      <div class="card">
+        <img src="${p.image || 'https://placeholder.com'}" alt="${p.name}">
+        <div class="card-info">
+          <h3>${p.name}</h3>
+          <p>${Number(p.price).toLocaleString()} VND</p>
+          <span class="stock-tag">${isOutOfStock ? '❌ Hết hàng' : '✔️ Sẵn có: ' + p.stock}</span>
+        </div>
+        <button class="btn-add" ${isOutOfStock ? 'disabled' : ''} onclick="addToCart('${p.id}')">
+          ${isOutOfStock ? 'Hết' : 'Mua'}
+        </button>
+      </div>
+    `;
+  });
+}
+
+function filterProducts() {
+  const keyword = removeAccents(document.getElementById("searchInput").value.toLowerCase());
+  const filtered = allProducts.filter(p => 
+    removeAccents(p.name.toLowerCase()).includes(keyword)
+  );
+  displayProducts(filtered);
 }
 
 function addToCart(id) {
@@ -165,7 +200,7 @@ function renderUI() {
           <button class="btn-qty" onclick="updateQty('${i.id}', -1)">-</button>
           <span>${i.quantity}</span>
           <button class="btn-qty" onclick="updateQty('${i.id}', 1)">+</button>
-          <button style="border:none; color:red; background:none" onclick="removeItem('${i.id}')">✕</button>
+          <button style="border:none; color:red; background:none; padding-left:10px" onclick="removeItem('${i.id}')">✕</button>
         </div>
       </div>`;
   });
