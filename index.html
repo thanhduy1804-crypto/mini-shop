@@ -104,7 +104,7 @@
 </div>
 
 <script>
-const API = "https://script.google.com/macros/s/AKfycbwamQrrD7jx8o6KnT4YJJDJM9MLvEUc3oFZtxod5OeKLBrhBPEWKnDzPMpmIpUBDzfx/exec";
+const API = "https://script.google.com/macros/s/AKfycbxdRiHlEWGP8_Ek-BGz5qWt1pDXxa13SKTZ8Lw2odYTUyxkxoHLZxpgBHlQs44vxGXg/exec";
 let allProducts = [];
 let cart = JSON.parse(localStorage.getItem("cart") || "[]");
 
@@ -211,29 +211,47 @@ function renderUI() {
 
 function openCheckout() {
   if (cart.length === 0) return alert("Giỏ hàng trống!");
-  const name = prompt("Tên khách hàng:"); if (!name) return;
-  const phone = prompt("Số điện thoại:"); if (!phone) return;
-  const address = prompt("Địa chỉ nhận hàng:"); if (!address) return;
 
-  const btn = document.querySelector(".btn-order");
-  btn.innerText = "ĐANG GỬI..."; btn.disabled = true;
+  // Hỏi thông tin khách hàng
+  const name = prompt("Nhập tên người nhận:");
+  if (!name) return;
+  const phone = prompt("Nhập số điện thoại:");
+  if (!phone) return;
+  const address = prompt("Nhập địa chỉ giao hàng:");
+  if (!address) return;
+
+  const total = cart.reduce((sum, i) => sum + (i.price * i.quantity), 0);
+  const btnOrder = document.querySelector(".btn-order");
+  btnOrder.innerText = "ĐANG GỬI...";
+  btnOrder.disabled = true;
+
+  const orderData = {
+    action: "createOrder",
+    customer: { name, phone, address },
+    items: cart,
+    total: total
+  };
 
   fetch(API, {
-    method: "POST", mode: "no-cors",
-    body: JSON.stringify({
-      action: "createOrder",
-      customer: { name, phone, address },
-      items: cart,
-      total: cart.reduce((s, i) => s + i.price * i.quantity, 0)
-    })
-  }).then(() => {
-    alert("Đặt hàng thành công!");
-    cart = []; saveCart();
-    if(document.getElementById("cartDetails").style.display === "block") toggleCart();
-  }).finally(() => {
-    btn.innerText = "ĐẶT HÀNG"; btn.disabled = false;
+    method: "POST",
+    body: JSON.stringify(orderData)
+  })
+  .then(res => res.json())
+  .then(res => {
+    if (res.status === "success") {
+      alert("Đặt hàng thành công! Đơn hàng " + res.orderId + " đã được gửi tới shop.");
+      cart = [];
+      saveCart();
+      toggleCart();
+    }
+  })
+  .catch(() => alert("Đơn hàng đang được xử lý (Vui lòng kiểm tra email sau ít phút)."))
+  .finally(() => {
+    btnOrder.innerText = "ĐẶT HÀNG";
+    btnOrder.disabled = false;
   });
 }
+
 
 loadProducts();
 renderUI();
